@@ -25,7 +25,7 @@ import matplotlib
 def simulate_many_noAGN():
 
     orbits = [2,12, 40]
-    redshift = [6.0, 6.5, 7.0, 7.6]
+    redshift = [5.6, 6.0, 6.5, 7.0, 7.6]
     #orbits = [40]
     #redshift = [6.0]
     mag = [24, 25, 26, 27]                    # J-band
@@ -146,7 +146,7 @@ def interp_many(file_ext, orb):   #Drizzle fits file from aXeSIM
     os.remove('OUTSIM/'+file_ext+'_slitless_2.SPC.fits')
     os.remove('OUTSIM/'+file_ext+'_images.fits')
     os.remove('OUTSIM/'+file_ext+'_direct.fits')
-    #os.remove('OUTSIM/'+file_ext+'_spectra.fits')
+    os.remove('OUTSIM/'+file_ext+'_spectra.fits')
     #os.remove('OUTSIM/'+file_ext+'_slitless.fits')
     os.remove('DATA/'+file_ext+'_spectra.fits')
     os.remove('DATA/'+file_ext+'_images.fits')
@@ -182,12 +182,11 @@ def calc_Reff(mass, z):      # used to be van der Wel+ 2014 mass-size relation, 
 def spectrum_disk(filename, cont_mag, EW):    # Makes gaussians
 
     # convert magnitude to f_lambda continuum
-    cont = 10**(-(cont_mag-23.9)/2.5) * 10**(-29)
-    print cont
+    cont = 10**(-(cont_mag+48.6)/2.5)
     # N.B. the wavelength below must be matched with the magnitude given in one_spec_G102.lis
     # i.e., currently it is set as MAG_F125W, so I use the pivot wavelength for that filter of 12486 A
     cont = cont * (3e18)/(12486**2)# * 1e18
-    print cont
+
     sigma = 2
 
     wave = np.arange(0, 2500, 0.5)
@@ -198,11 +197,11 @@ def spectrum_disk(filename, cont_mag, EW):    # Makes gaussians
     Lya = C * g
     G = Lya + cont
     
-    #f = open('SIMDATA/'+filename, 'w')
-    #for i, w in enumerate(wave):
-    #    f.write('%.5e  ' % w)
-    #    f.write('%.5e\n' % G[i])
-    #f.close()
+    f = open('SIMDATA/'+filename, 'w')
+    for i, w in enumerate(wave):
+        f.write('%.5e  ' % w)
+        f.write('%.5e\n' % G[i])
+    f.close()
 
     return wave, G
 
@@ -320,7 +319,7 @@ def spect1D(orb):
 
             a = f.split('z')[0]
             z = float(a.split('/')[2])
-            #if z != 7.6:
+            #if z != 6:
             #    continue
 
             dat = pyfits.open(f)
@@ -360,10 +359,9 @@ def spect1D(orb):
                 flux1d.append(np.sum(flux2d[8:ypix-9,xx]))
                 err1d.append(np.sum(err2d[8:ypix-9,xx]))
 
-            plt.plot(wl0[20:-20], flux1d[20:-20])
-            plt.show()
+            #plt.plot(wl0[20:-20], flux1d[20:-20])
+            #plt.show()
             
-
             ff = open(fol+'_'+str(j)+'.dat', 'w')
             ff.write('# Wavelength         Flux       Error\n')
             for i, el in enumerate(flux1d):
