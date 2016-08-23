@@ -24,12 +24,15 @@ import matplotlib
 
 def simulate_many_noAGN():
 
-    orbits = [2,12, 40]
-    redshift = [5.6, 6.0, 6.5, 7.0, 7.6]
-    #orbits = [40]
-    #redshift = [6.0]
+    #orbits = [2,12, 40]
+    redshift = [6.0, 6.5, 7.6]
+    orbits = [12]
+    #redshift = [7.0]
+    #mag = [24]
+    #EW = [50]
+    #mag_str = ['24']
     mag = [24, 25, 26, 27]                    # J-band
-    EW = [20, 50, 100, 150, 200]              # Figure 2, proposal, Angstroms
+    EW = [20, 50, 100, 150]                   # Figure 2, proposal, Angstroms
     mag_str = ['24', '25', '26', '27']
     
     for z in redshift:
@@ -73,7 +76,7 @@ def edit_onespec(z, cont_mag, kpc, pix):      # spectemp is the line number of t
     # read in the one_spec file
     fname = './save/one_spec_G102.lis'
     f = open(fname, 'w')
-    f.write('# 1  NUMBER\n# 2  X_IMAGE\n# 3  Y_IMAGE\n# 4  A_IMAGE\n# 5  B_IMAGE\n# 6  THETA_IMAGE\n# 7  MAG_F125W\n# 8  Z\n# 9  SPECTEMP\n# 10 MODIMAGE\n')
+    f.write('# 1  NUMBER\n# 2  X_IMAGE\n# 3  Y_IMAGE\n# 4  A_IMAGE\n# 5  B_IMAGE\n# 6  THETA_IMAGE\n# 7  MAG_F1250W\n# 8  Z\n# 9  SPECTEMP\n# 10 MODIMAGE\n')
 
     x = [0, 240, 480, 720]
     y = [20, 60, 100, 140, 180, 220, 260, 300, 340, 380, 420, 460, 500, 540, 580, 620, 660, 700, 740, 780, 820, 860, 900, 940, 980]
@@ -97,7 +100,7 @@ def edit_onespec(z, cont_mag, kpc, pix):      # spectemp is the line number of t
             f.write(' '+str(z)+' ')
             f.write('1 '+str(2+ind[0])+'\n')
 
-            i += 2
+            i += 1
             n += 1
     return 
 
@@ -142,11 +145,11 @@ def interp_many(file_ext, orb):   #Drizzle fits file from aXeSIM
             k += 1
         i += 480
             
-    os.remove('OUTSIM/'+file_ext+'_slitless_2.STP.fits')
-    os.remove('OUTSIM/'+file_ext+'_slitless_2.SPC.fits')
-    os.remove('OUTSIM/'+file_ext+'_images.fits')
-    os.remove('OUTSIM/'+file_ext+'_direct.fits')
-    os.remove('OUTSIM/'+file_ext+'_spectra.fits')
+    #os.remove('OUTSIM/'+file_ext+'_slitless_2.STP.fits')
+    #os.remove('OUTSIM/'+file_ext+'_slitless_2.SPC.fits')
+    #os.remove('OUTSIM/'+file_ext+'_images.fits')
+    #os.remove('OUTSIM/'+file_ext+'_direct.fits')
+    #os.remove('OUTSIM/'+file_ext+'_spectra.fits')
     #os.remove('OUTSIM/'+file_ext+'_slitless.fits')
     os.remove('DATA/'+file_ext+'_spectra.fits')
     os.remove('DATA/'+file_ext+'_images.fits')
@@ -319,48 +322,56 @@ def spect1D(orb):
 
             a = f.split('z')[0]
             z = float(a.split('/')[2])
-            #if z != 6:
-            #    continue
+            if z != 6.5:
+                continue
 
             dat = pyfits.open(f)
             flux2d = dat[1].data
             err2d = dat[2].data
-            ypix = len(flux2d[1])
+            ypix = len(flux2d[0])
             
             # Calculated by fitting a line to by-eye determination of 5 redshifts
-            c = -47.425*z + 6814.759
+            #c = -47.425*z + 6814.759
             wld = 24.5/2
-            wl = c + np.arange(0, (flux2d.shape)[1], 1)*wld - 15*wld
+            wl = 6710 + np.arange(0, (flux2d.shape)[1], 1)*wld - 15*wld
             wl0 = wl/(1+z)
 
             err2d[np.where(err2d == 0)] = 10*np.max(err2d)
 
-            idx = []
-            wtest = wavelength/(1+z)
-            w = np.linspace(wtest[0], wtest[-1], 4751)
-            for i in wl0:
-                a = np.abs(w - i).argmin()
-                if a != a+2:
-                    idx.append(a)
-            se = sensit[idx]
+            # Taken from Jon's IDL code - not the best way to do it I don't think
+            #idx = []
+            #wtest = wavelength/(1+z)
+            #w = np.linspace(wtest[0], wtest[-1], 4751)
+            #for i in wl0:
+            #    a = np.abs(w - i).argmin()
+            #    if a != a+2:
+            #        idx.append(a)
+            #se = sensit[idx]
             
+            print wavelength/(1+z)
+            print wl0
+            func = scipy.interpolate.interp1d(wavelength/(1+z), sensit)
+            se = func(wl0)
+
             flux2d_new = np.zeros(flux2d.shape)
             err2d_new = np.zeros(err2d.shape)
             for i, fl in enumerate(flux2d):
+                if i == 0:
+                    print fl/se
                 flux2d_new[i] = fl
                 err2d_new[i] = err2d[i]
-
+                
             flux2d = flux2d_new
             err2d = err2d_new
 
             flux1d = []
             err1d = []
             for xx in np.arange(0, (flux2d.shape)[1], 1):
-                flux1d.append(np.sum(flux2d[8:ypix-9,xx]))
-                err1d.append(np.sum(err2d[8:ypix-9,xx]))
+                flux1d.append(np.sum(flux2d[20:ypix-21,xx]))
+                err1d.append(np.sum(err2d[20:ypix-21,xx]))
 
-            #plt.plot(wl0[20:-20], flux1d[20:-20])
-            #plt.show()
+            plt.plot(wl0, flux1d)
+            plt.show()
             
             ff = open(fol+'_'+str(j)+'.dat', 'w')
             ff.write('# Wavelength         Flux       Error\n')
@@ -381,7 +392,7 @@ def complete(orb):
     for i, n in enumerate(ID):
         temp = n.split('_'+str(orb)+'orb')
         name.append(temp[0])
-    
+    EE, PP, mm = [], [], []
     f = open('../completeness_'+str(orb)+'orb.dat', 'w')
     un = np.unique(name)  # Find the unique IDs in name
     for n in un:
@@ -407,10 +418,12 @@ def complete(orb):
         f.write('    '+str(ew))
         f.write('   '+str(perc_det)+'\n')
         #f.write('   '+str(np.median(r))+)
-
+        #EE.append(ew)
+        #PP.append(perc_det)
+        #mm.append(mag)
     f.close()
 
-    return 
+    return# EE, PP, mm
 
 
 def comp_hexplots(orb):
@@ -420,38 +433,38 @@ def comp_hexplots(orb):
     #ind = np.where(ew == 200)
     
     fig, ax = plt.subplots()
-    im = ax.hexbin(z, mag, gridsize = 4, C = comp, cmap = plt.cm.YlGnBu)
+    im = ax.hexbin(z, mag, gridsize = 3, C = comp, cmap = plt.cm.YlGnBu)
     cb = fig.colorbar(im, ax=ax)
     cb.set_label('Completeness')
     ax.set_xlabel(r'Redshift')
     ax.set_ylabel(r'Magnitude')
-    ax.set_xlim(5.2, 8)
-    ax.set_ylim(23, 28)
-    im.set_clim(vmin =.7,vmax=1)
+    ax.set_xlim(5.6, 8)
+    ax.set_ylim(22.5, 28.5)
+    im.set_clim(vmin =0.2,vmax=1)
     plt.savefig('../hex_plots/hex_z_mag_'+str(orb)+'orb_acc')
     plt.close()
 
     fig, ax = plt.subplots()
-    im = ax.hexbin(ew, z, gridsize = 4, C = comp, cmap = plt.cm.YlGnBu)
+    im = ax.hexbin(ew, z, gridsize = 3, C = comp, cmap = plt.cm.YlGnBu)
     cb = fig.colorbar(im, ax=ax)
     cb.set_label('Completeness')
     ax.set_ylabel(r'Redshift')
-    ax.set_xlabel(r'Equivalent Width')
-    ax.set_ylim(5.2, 8)
-    ax.set_xlim(0, 225)
-    im.set_clim(vmin =.7,vmax=1)
+    ax.set_xlabel(r'Restframe Equivalent Width')
+    ax.set_ylim(5.3, 8.3)
+    ax.set_xlim(-10, 180)
+    im.set_clim(vmin =0.2,vmax=1)
     fig.savefig('../hex_plots/hex_z_EW_'+str(orb)+'orb_acc')
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    im = ax.hexbin(ew, mag, gridsize = 4, C = comp, cmap = plt.cm.YlGnBu)
-    ax.set_xlabel(r'Equivalent Width')
+    im = ax.hexbin(ew, mag, gridsize = 3, C = comp, cmap = plt.cm.YlGnBu)
+    ax.set_xlabel(r'Restframe Equivalent Width')
     ax.set_ylabel(r'Magnitude')
-    ax.set_xlim(0, 225)
-    ax.set_ylim(23, 28)
+    ax.set_xlim(-10, 180)
+    ax.set_ylim(22.5, 28.5)
     cb = fig.colorbar(im, ax=ax)
     cb.set_label('Completeness')
-    im.set_clim(vmin =.7,vmax=1)
+    im.set_clim(vmin =0.2,vmax=1)
     fig.savefig('../hex_plots/hex_EW_mag_'+str(orb)+'orb_acc')
     plt.close(fig)
 
